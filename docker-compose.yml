@@ -5,9 +5,22 @@
       - "8000:8000"
     environment:
       - DATABASE_URL=mysql+pymysql://root:secret@db:3306/mydb
+      - CELERY_BROKER_URL=redis://redis:6379/0
     depends_on:
       db:
         condition: service_healthy
+      redis:
+        condition: service_healthy
+    restart: on-failure
+
+  worker:
+    build: .
+    command: celery -A worker.celery_app worker --loglevel=info
+    environment:
+      - DATABASE_URL=mysql+pymysql://root:secret@db:3306/mydb
+      - CELERY_BROKER_URL=redis://redis:6379/0
+    depends_on:
+      - redis
     restart: on-failure
 
   db:
@@ -19,6 +32,14 @@
       - db_data:/var/lib/mysql
     healthcheck:
       test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  redis:
+    image: redis:7.0
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
       interval: 5s
       timeout: 5s
       retries: 10
