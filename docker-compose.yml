@@ -6,7 +6,10 @@
     environment:
       - DATABASE_URL=mysql+pymysql://root:secret@db:3306/mydb
     depends_on:
-      - db
+      db:
+        condition: service_healthy
+    restart: on-failure
+
   db:
     image: mysql:8.0
     environment:
@@ -14,5 +17,11 @@
       MYSQL_DATABASE: mydb
     volumes:
       - db_data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
 volumes:
   db_data:
